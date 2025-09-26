@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/config"
+	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/infrastructure"
 )
 
 // TestConfigurationClient_RedPhase defines the expected behaviors for configuration service integration
@@ -16,25 +17,25 @@ func TestConfigurationClient_GetConfiguration(t *testing.T) {
 	tests := []struct {
 		name         string
 		key          string
-		expectedType ConfigValueType
+		expectedType infrastructure.ConfigValueType
 		wantErr      bool
 	}{
 		{
 			name:         "audit_retention_days",
 			key:          "audit.retention_days",
-			expectedType: ConfigValueTypeNumber,
+			expectedType: infrastructure.ConfigValueTypeNumber,
 			wantErr:      false,
 		},
 		{
 			name:         "correlation_enabled",
 			key:          "audit.correlation.enabled",
-			expectedType: ConfigValueTypeBoolean,
+			expectedType: infrastructure.ConfigValueTypeBoolean,
 			wantErr:      false,
 		},
 		{
 			name:         "storage_backend",
 			key:          "audit.storage.backend",
-			expectedType: ConfigValueTypeString,
+			expectedType: infrastructure.ConfigValueTypeString,
 			wantErr:      false,
 		},
 		{
@@ -48,9 +49,11 @@ func TestConfigurationClient_GetConfiguration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			client := NewConfigurationClient(&config.Config{
+			client := infrastructure.NewConfigurationClient(&config.Config{
 				ConfigurationServiceURL: "http://localhost:8090",
-			})
+				RequestTimeout:          5 * time.Second,
+				CacheTTL:               5 * time.Minute,
+			}, nil)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
@@ -85,10 +88,11 @@ func TestConfigurationClient_Caching(t *testing.T) {
 	t.Run("caches_configuration_values", func(t *testing.T) {
 		t.Parallel()
 
-		client := NewConfigurationClient(&config.Config{
+		client := infrastructure.NewConfigurationClient(&config.Config{
 			ConfigurationServiceURL: "http://localhost:8090",
+			RequestTimeout:          5 * time.Second,
 			CacheTTL:               300 * time.Second,
-		})
+		}, nil)
 
 		ctx := context.Background()
 		err := client.Connect(ctx)
@@ -128,17 +132,17 @@ func TestConfigurationClient_Caching(t *testing.T) {
 func TestConfigurationClient_TypeConversions(t *testing.T) {
 	tests := []struct {
 		name        string
-		configValue ConfigurationValue
-		testFunc    func(t *testing.T, value ConfigurationValue)
+		configValue infrastructure.ConfigurationValue
+		testFunc    func(t *testing.T, value infrastructure.ConfigurationValue)
 	}{
 		{
 			name: "string_conversion",
-			configValue: ConfigurationValue{
+			configValue: infrastructure.ConfigurationValue{
 				Key:   "test.string",
 				Value: "audit-correlator",
-				Type:  ConfigValueTypeString,
+				Type:  infrastructure.ConfigValueTypeString,
 			},
-			testFunc: func(t *testing.T, value ConfigurationValue) {
+			testFunc: func(t *testing.T, value infrastructure.ConfigurationValue) {
 				result := value.AsString()
 				if result != "audit-correlator" {
 					t.Errorf("Expected 'audit-correlator', got '%s'", result)
@@ -147,13 +151,16 @@ func TestConfigurationClient_TypeConversions(t *testing.T) {
 		},
 		{
 			name: "number_conversion",
-			configValue: ConfigurationValue{
+			configValue: infrastructure.ConfigurationValue{
 				Key:   "test.number",
 				Value: "30",
-				Type:  ConfigValueTypeNumber,
+				Type:  infrastructure.ConfigValueTypeNumber,
 			},
-			testFunc: func(t *testing.T, value ConfigurationValue) {
-				result := value.AsInt()
+			testFunc: func(t *testing.T, value infrastructure.ConfigurationValue) {
+				result, err := value.AsInt()
+				if err != nil {
+					t.Errorf("AsInt() failed: %v", err)
+				}
 				if result != 30 {
 					t.Errorf("Expected 30, got %d", result)
 				}
@@ -161,13 +168,16 @@ func TestConfigurationClient_TypeConversions(t *testing.T) {
 		},
 		{
 			name: "boolean_conversion",
-			configValue: ConfigurationValue{
+			configValue: infrastructure.ConfigurationValue{
 				Key:   "test.boolean",
 				Value: "true",
-				Type:  ConfigValueTypeBoolean,
+				Type:  infrastructure.ConfigValueTypeBoolean,
 			},
-			testFunc: func(t *testing.T, value ConfigurationValue) {
-				result := value.AsBool()
+			testFunc: func(t *testing.T, value infrastructure.ConfigurationValue) {
+				result, err := value.AsBool()
+				if err != nil {
+					t.Errorf("AsBool() failed: %v", err)
+				}
 				if !result {
 					t.Error("Expected true, got false")
 				}
@@ -183,53 +193,3 @@ func TestConfigurationClient_TypeConversions(t *testing.T) {
 	}
 }
 
-// ConfigurationClient interface that needs to be implemented
-type ConfigurationClient interface {
-	Connect(ctx context.Context) error
-	Disconnect(ctx context.Context) error
-	GetConfiguration(ctx context.Context, key string) (ConfigurationValue, error)
-	GetCacheStats() CacheStats
-}
-
-type ConfigValueType int
-
-const (
-	ConfigValueTypeString ConfigValueType = iota
-	ConfigValueTypeNumber
-	ConfigValueTypeBoolean
-	ConfigValueTypeJSON
-)
-
-type ConfigurationValue struct {
-	Key         string          `json:"key"`
-	Value       string          `json:"value"`
-	Type        ConfigValueType `json:"type"`
-	Environment string          `json:"environment"`
-	LastUpdated time.Time       `json:"last_updated"`
-}
-
-func (cv ConfigurationValue) AsString() string {
-	return cv.Value
-}
-
-func (cv ConfigurationValue) AsInt() int {
-	// Implementation will convert string to int
-	panic("TDD Red Phase: AsInt not implemented yet")
-}
-
-func (cv ConfigurationValue) AsBool() bool {
-	// Implementation will convert string to bool
-	panic("TDD Red Phase: AsBool not implemented yet")
-}
-
-type CacheStats struct {
-	CacheHits   int64   `json:"cache_hits"`
-	CacheMisses int64   `json:"cache_misses"`
-	CacheSize   int     `json:"cache_size"`
-	HitRate     float64 `json:"hit_rate"`
-}
-
-// Constructor function that needs to be implemented
-func NewConfigurationClient(cfg *config.Config) ConfigurationClient {
-	panic("TDD Red Phase: NewConfigurationClient not implemented yet")
-}
