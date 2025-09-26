@@ -1,3 +1,9 @@
+PULL_*.md
+PR_*.md
+
+# go
+go.sum
+audit-correlator
 
 # Claude Configuration (IP separated)
 .claude-defaults/

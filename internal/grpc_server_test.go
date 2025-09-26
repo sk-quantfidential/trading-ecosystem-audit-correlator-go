@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/config"
+	grpcpresentation "github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/presentation/grpc"
 )
 
 // TestGRPCServer_RedPhase defines the expected behaviors for enhanced gRPC server
@@ -26,7 +27,7 @@ func TestGRPCServer_HealthService(t *testing.T) {
 			GRPCPort:   0, // Use random port for testing
 		}
 
-		server := NewAuditGRPCServer(cfg)
+		server := grpcpresentation.NewAuditGRPCServer(cfg, nil, nil)
 
 		// Start server in background
 		lis, err := net.Listen("tcp", ":0")
@@ -80,7 +81,7 @@ func TestGRPCServer_DataIngestionService(t *testing.T) {
 			GRPCPort:   0,
 		}
 
-		server := NewAuditGRPCServer(cfg)
+		server := grpcpresentation.NewAuditGRPCServer(cfg, nil, nil)
 
 		lis, err := net.Listen("tcp", ":0")
 		if err != nil {
@@ -125,7 +126,7 @@ func TestGRPCServer_WorkflowService(t *testing.T) {
 			GRPCPort:   0,
 		}
 
-		server := NewAuditGRPCServer(cfg)
+		server := grpcpresentation.NewAuditGRPCServer(cfg, nil, nil)
 
 		lis, err := net.Listen("tcp", ":0")
 		if err != nil {
@@ -174,7 +175,7 @@ func TestGRPCServer_Metrics(t *testing.T) {
 			GRPCPort:   0,
 		}
 
-		server := NewAuditGRPCServer(cfg)
+		server := grpcpresentation.NewAuditGRPCServer(cfg, nil, nil)
 		metrics := server.GetMetrics()
 
 		// Verify metrics are available
@@ -192,21 +193,3 @@ func TestGRPCServer_Metrics(t *testing.T) {
 	})
 }
 
-// AuditGRPCServer interface that needs to be implemented
-type AuditGRPCServer interface {
-	Serve(lis net.Listener) error
-	GracefulStop()
-	GetMetrics() ServerMetrics
-}
-
-type ServerMetrics struct {
-	ActiveConnections int64             `json:"active_connections"`
-	TotalRequests     int64             `json:"total_requests"`
-	ServiceStatus     map[string]string `json:"service_status"`
-	Uptime            time.Duration     `json:"uptime"`
-}
-
-// Constructor function that needs to be implemented
-func NewAuditGRPCServer(cfg *config.Config) AuditGRPCServer {
-	panic("TDD Red Phase: NewAuditGRPCServer not implemented yet")
-}

@@ -12,12 +12,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/health"
-	"google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/config"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/handlers"
+	grpcpresentation "github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/presentation/grpc"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/services"
 )
 
@@ -30,15 +28,17 @@ func main() {
 
 	auditService := services.NewAuditService(logger)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
-	grpcServer := setupGRPCServer(cfg, auditService, logger)
+	grpcServer := grpcpresentation.NewAuditGRPCServer(cfg, auditService, logger)
 	httpServer := setupHTTPServer(cfg, auditService, logger)
 
 	go func() {
 		logger.WithField("port", cfg.GRPCPort).Info("Starting gRPC server")
-		if err := startGRPCServer(grpcServer, cfg.GRPCPort); err != nil {
+		lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCPort))
+		if err != nil {
+			logger.WithError(err).Fatal("Failed to listen on gRPC port")
+		}
+		if err := grpcServer.Serve(lis); err != nil {
 			logger.WithError(err).Fatal("Failed to start gRPC server")
 		}
 	}()
@@ -67,15 +67,6 @@ func main() {
 	logger.Info("Servers shutdown complete")
 }
 
-func setupGRPCServer(cfg *config.Config, auditService *services.AuditService, logger *logrus.Logger) *grpc.Server {
-	server := grpc.NewServer()
-
-	healthServer := health.NewServer()
-	grpc_health_v1.RegisterHealthServer(server, healthServer)
-	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
-
-	return server
-}
 
 func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, logger *logrus.Logger) *http.Server {
 	router := gin.New()
@@ -95,10 +86,3 @@ func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, lo
 	}
 }
 
-func startGRPCServer(server *grpc.Server, port int) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	if err != nil {
-		return err
-	}
-	return server.Serve(lis)
-}
