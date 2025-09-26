@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/config"
+	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/infrastructure"
 )
 
 // TestInterServiceCommunication_RedPhase defines the expected behaviors for inter-service communication
@@ -21,10 +22,18 @@ func TestInterServiceCommunication_RiskMonitorIntegration(t *testing.T) {
 		t.Parallel()
 
 		cfg := &config.Config{
-			ServiceName: "audit-correlator",
+			ServiceName:             "audit-correlator",
+			ServiceVersion:          "1.0.0",
+			RedisURL:                "redis://localhost:6379",
+			ConfigurationServiceURL: "http://localhost:8090",
+			RequestTimeout:          5 * time.Second,
+			CacheTTL:               5 * time.Minute,
+			HealthCheckInterval:     30 * time.Second,
+			GRPCPort:               9093,
+			HTTPPort:               8083,
 		}
 
-		clientManager := NewInterServiceClientManager(cfg)
+		clientManager := infrastructure.NewInterServiceClientManager(cfg, nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -63,10 +72,18 @@ func TestInterServiceCommunication_TradingEngineIntegration(t *testing.T) {
 		t.Parallel()
 
 		cfg := &config.Config{
-			ServiceName: "audit-correlator",
+			ServiceName:             "audit-correlator",
+			ServiceVersion:          "1.0.0",
+			RedisURL:                "redis://localhost:6379",
+			ConfigurationServiceURL: "http://localhost:8090",
+			RequestTimeout:          5 * time.Second,
+			CacheTTL:               5 * time.Minute,
+			HealthCheckInterval:     30 * time.Second,
+			GRPCPort:               9093,
+			HTTPPort:               8083,
 		}
 
-		clientManager := NewInterServiceClientManager(cfg)
+		clientManager := infrastructure.NewInterServiceClientManager(cfg, nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -105,11 +122,18 @@ func TestInterServiceCommunication_ServiceDiscovery(t *testing.T) {
 		t.Parallel()
 
 		cfg := &config.Config{
-			ServiceName: "audit-correlator",
-			RedisURL:    "redis://localhost:6379",
+			ServiceName:             "audit-correlator",
+			ServiceVersion:          "1.0.0",
+			RedisURL:                "redis://localhost:6379",
+			ConfigurationServiceURL: "http://localhost:8090",
+			RequestTimeout:          5 * time.Second,
+			CacheTTL:               5 * time.Minute,
+			HealthCheckInterval:     30 * time.Second,
+			GRPCPort:               9093,
+			HTTPPort:               8083,
 		}
 
-		clientManager := NewInterServiceClientManager(cfg)
+		clientManager := infrastructure.NewInterServiceClientManager(cfg, nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -152,10 +176,18 @@ func TestInterServiceCommunication_ConnectionPooling(t *testing.T) {
 		t.Parallel()
 
 		cfg := &config.Config{
-			ServiceName: "audit-correlator",
+			ServiceName:             "audit-correlator",
+			ServiceVersion:          "1.0.0",
+			RedisURL:                "redis://localhost:6379",
+			ConfigurationServiceURL: "http://localhost:8090",
+			RequestTimeout:          5 * time.Second,
+			CacheTTL:               5 * time.Minute,
+			HealthCheckInterval:     30 * time.Second,
+			GRPCPort:               9093,
+			HTTPPort:               8083,
 		}
 
-		clientManager := NewInterServiceClientManager(cfg)
+		clientManager := infrastructure.NewInterServiceClientManager(cfg, nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -205,11 +237,18 @@ func TestInterServiceCommunication_ErrorHandling(t *testing.T) {
 		t.Parallel()
 
 		cfg := &config.Config{
-			ServiceName:    "audit-correlator",
-			RequestTimeout: 1 * time.Second,
+			ServiceName:             "audit-correlator",
+			ServiceVersion:          "1.0.0",
+			RedisURL:                "redis://localhost:6379",
+			ConfigurationServiceURL: "http://localhost:8090",
+			RequestTimeout:          1 * time.Second,
+			CacheTTL:               5 * time.Minute,
+			HealthCheckInterval:     30 * time.Second,
+			GRPCPort:               9093,
+			HTTPPort:               8083,
 		}
 
-		clientManager := NewInterServiceClientManager(cfg)
+		clientManager := infrastructure.NewInterServiceClientManager(cfg, nil)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -227,68 +266,9 @@ func TestInterServiceCommunication_ErrorHandling(t *testing.T) {
 		}
 
 		// Verify error type
-		if !IsServiceUnavailableError(err) {
+		if !infrastructure.IsServiceUnavailableError(err) {
 			t.Errorf("Expected ServiceUnavailableError, got %T", err)
 		}
 	})
 }
 
-// InterServiceClientManager interface that needs to be implemented
-type InterServiceClientManager interface {
-	Initialize(ctx context.Context) error
-	Cleanup(ctx context.Context) error
-	GetRiskMonitorClient(ctx context.Context) (RiskMonitorClient, error)
-	GetTradingEngineClient(ctx context.Context) (TradingEngineClient, error)
-	GetClientByName(ctx context.Context, serviceName string) (ServiceClient, error)
-	DiscoverServices(ctx context.Context) ([]ServiceInfo, error)
-	GetConnectionStats() ConnectionStats
-}
-
-type ServiceClient interface {
-	HealthCheck(ctx context.Context) (HealthStatus, error)
-}
-
-type RiskMonitorClient interface {
-	ServiceClient
-	GetRiskMetrics(ctx context.Context) (RiskMetrics, error)
-}
-
-type TradingEngineClient interface {
-	ServiceClient
-	GetTradingStatus(ctx context.Context) (TradingStatus, error)
-}
-
-type HealthStatus struct {
-	Status      string    `json:"status"`
-	LastChecked time.Time `json:"last_checked"`
-	Details     string    `json:"details"`
-}
-
-type RiskMetrics struct {
-	TotalRiskEvents  int64     `json:"total_risk_events"`
-	HighRiskAlerts   int64     `json:"high_risk_alerts"`
-	LastUpdated      time.Time `json:"last_updated"`
-}
-
-type TradingStatus struct {
-	ActiveStrategies int       `json:"active_strategies"`
-	TotalTrades      int64     `json:"total_trades"`
-	LastTradeTime    time.Time `json:"last_trade_time"`
-}
-
-type ConnectionStats struct {
-	ActiveConnections int64 `json:"active_connections"`
-	TotalConnections  int64 `json:"total_connections"`
-	FailedConnections int64 `json:"failed_connections"`
-}
-
-// Error handling
-func IsServiceUnavailableError(err error) bool {
-	// Implementation will check error type
-	panic("TDD Red Phase: IsServiceUnavailableError not implemented yet")
-}
-
-// Constructor function that needs to be implemented
-func NewInterServiceClientManager(cfg *config.Config) InterServiceClientManager {
-	panic("TDD Red Phase: NewInterServiceClientManager not implemented yet")
-}
