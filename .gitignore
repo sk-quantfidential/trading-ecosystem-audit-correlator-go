@@ -1,3 +1,51 @@
+PULL_*.md
+PR_*.md
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+
+# Binary output
+audit-correlator
+/audit-correlator
+
+# Go coverage files
+*.coverprofile
+coverage.html
+coverage.out
+
+# Go vendor directory
+vendor/
+
+# Go module cache
+go.sum
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+logs/
 
 # Claude Configuration (IP separated)
 .claude-defaults/
