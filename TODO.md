@@ -95,32 +95,119 @@
 
 ## 🔄 Next Steps: Audit Data Adapter Integration
 
-### Priority Tasks for audit-data-adapter-go Integration:
+### TSE-0001.4 Integration Tasks (Phase-by-Phase Implementation)
 
-1. **Remove Direct Database Dependencies**:
-   - Remove direct Redis client imports (`github.com/redis/go-redis/v9`)
-   - Remove direct PostgreSQL imports (`github.com/lib/pq`)
-   - Update go.mod to only depend on audit-data-adapter-go for data operations
+#### ✅ **Task 0: Test Infrastructure Foundation** - COMPLETED
+- [x] Fixed JSON serialization issues (map[string]interface{} → json.RawMessage)
+- [x] Created comprehensive Makefile with unit/integration test targets
+- [x] Established TDD Red-Green-Refactor pattern testing (4 test files, 15+ test scenarios)
+- [x] Build status: ✅ Compiles successfully after JSON serialization fix
+- [x] Test status: 10 unit tests (7 passing, 3 skipped), 5 integration tests (0 passing, 5 skipped - infrastructure dependencies)
 
-2. **Refactor Infrastructure Layer**:
-   - Replace `internal/infrastructure` Redis clients with audit-data-adapter-go DataAdapter
-   - Update service discovery to use DataAdapter.ServiceDiscoveryRepository interface
-   - Update configuration caching to use DataAdapter.CacheRepository interface
+#### 📋 **Task 1: Remove Direct Database Dependencies** - READY TO START
+**Goal**: Eliminate direct database imports and prepare for DataAdapter integration
+**Files to Modify**:
+- `go.mod` - Remove `github.com/redis/go-redis/v9`, `github.com/lib/pq`
+- `internal/infrastructure/service_discovery.go` - Remove direct Redis imports
+- `internal/services/audit.go` - Remove direct audit event creation
 
-3. **Update Service Layer**:
-   - Modify `internal/services/audit.go` to use DataAdapter.AuditEventRepository
-   - Update audit event creation and correlation logic to use repository patterns
-   - Ensure all audit events use proper audit-data-adapter-go models
+**Acceptance Criteria**:
+- [ ] No direct Redis client imports in any Go files
+- [ ] No direct PostgreSQL imports in any Go files
+- [ ] Code still compiles (with temporary stubs if needed)
+- [ ] All database access points identified for DataAdapter integration
 
-4. **Test Integration**:
-   - Update test dependencies to use audit-data-adapter-go test utilities
-   - Configure tests to use shared orchestrator database/Redis instances
-   - Validate that all tests pass with delegated data operations
+#### 🏗️ **Task 2: Refactor Infrastructure Layer** - AFTER TASK 1
+**Goal**: Replace direct database access with audit-data-adapter-go DataAdapter interfaces
+**Files to Modify**:
+- `internal/infrastructure/service_discovery.go` → Use `DataAdapter.ServiceDiscoveryRepository`
+- `internal/infrastructure/configuration_client.go` → Use `DataAdapter.CacheRepository`
+- `internal/config/config.go` → Initialize DataAdapter
 
-5. **Configuration Integration**:
-   - Update configuration to initialize audit-data-adapter-go DataAdapter
-   - Ensure environment variables align with audit-data-adapter-go patterns
-   - Implement proper connection lifecycle management
+**Implementation Steps**:
+1. Add DataAdapter initialization in config
+2. Replace Redis service discovery with ServiceDiscoveryRepository interface
+3. Replace Redis configuration caching with CacheRepository interface
+4. Update connection lifecycle management
+
+**Acceptance Criteria**:
+- [ ] Service discovery uses only DataAdapter.ServiceDiscoveryRepository interface
+- [ ] Configuration caching uses only DataAdapter.CacheRepository interface
+- [ ] DataAdapter properly initialized with orchestrator credentials
+- [ ] Connection lifecycle (Connect/Disconnect) working through adapter
+
+#### 🔧 **Task 3: Update Service Layer** - AFTER TASK 2
+**Goal**: Integrate audit event operations with repository patterns
+**Files to Modify**:
+- `internal/services/audit.go` → Use `DataAdapter.AuditEventRepository`
+- `internal/handlers/*` → Update to use repository patterns
+- `internal/presentation/grpc/*` → Ensure proper model usage
+
+**Implementation Steps**:
+1. Update audit event creation to use AuditEventRepository.Create()
+2. Update audit event queries to use AuditEventRepository.Query()
+3. Update correlation logic to use AuditEventRepository.GetCorrelatedEvents()
+4. Ensure all models align with audit-data-adapter-go patterns
+
+**Acceptance Criteria**:
+- [ ] All audit events created through AuditEventRepository interface
+- [ ] Event correlation working through repository queries
+- [ ] All models consistent with audit-data-adapter-go standards
+- [ ] No direct database access in service layer
+
+#### 🧪 **Task 4: Test Integration** - AFTER TASK 3
+**Goal**: Enable tests to use shared orchestrator services and validate integration
+**Files to Modify**:
+- `internal/*_test.go` → Update to use audit-data-adapter-go test utilities
+- Test configuration → Use shared PostgreSQL/Redis instances
+- Integration tests → Validate cross-component functionality
+
+**Implementation Steps**:
+1. Configure tests to use audit-data-adapter-go test environment setup
+2. Update test mocking to use repository interfaces
+3. Enable integration tests with shared orchestrator PostgreSQL/Redis
+4. Add cross-component audit validation tests
+
+**Acceptance Criteria**:
+- [ ] Unit tests: 10/10 passing (currently 7/10 due to infrastructure gaps)
+- [ ] Integration tests: 5/5 passing (currently 0/5 due to infrastructure gaps)
+- [ ] Tests use shared orchestrator database/Redis instances
+- [ ] Cross-component audit functionality validated
+
+#### ⚙️ **Task 5: Configuration Integration** - AFTER TASK 4
+**Goal**: Complete environment alignment and lifecycle management
+**Files to Create/Modify**:
+- `.env.example` → Following audit-data-adapter-go pattern
+- Docker configuration → Use shared environment variables
+- Documentation → Integration patterns and usage
+
+**Implementation Steps**:
+1. Create .env.example with orchestrator-compatible configuration
+2. Update Docker setup to use shared environment
+3. Implement proper DataAdapter lifecycle management
+4. Document integration patterns for replication
+
+**Acceptance Criteria**:
+- [ ] Environment configuration aligned with audit-data-adapter-go patterns
+- [ ] Docker integration with orchestrator services working
+- [ ] Proper connection lifecycle management implemented
+- [ ] Integration pattern documented for replication to other Go services
+
+### 🎯 **Success Metrics After Integration**:
+- ✅ **Shared Infrastructure**: Service uses audit-data-adapter-go for all database operations
+- ✅ **Test Success**: 100% test pass rate (15/15 scenarios passing)
+- ✅ **Repository Pattern**: All database access through clean interfaces
+- ✅ **Orchestrator Integration**: Seamless operation with shared services
+- ✅ **Replication Ready**: Pattern established for custodian-simulator-go, exchange-simulator-go, market-data-simulator-go
+
+### 📋 **Testing Commands During Integration**:
+```bash
+# After each task, validate progress
+make test-unit              # Should improve pass rate as dependencies are resolved
+make test-integration       # Should enable orchestrator connectivity
+make status                 # Check overall integration health
+make build                  # Ensure compilation throughout process
+```
 
 ---
 
