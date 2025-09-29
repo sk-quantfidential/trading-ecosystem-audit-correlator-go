@@ -15,6 +15,7 @@ go.work.sum
 # Binary output
 audit-correlator
 /audit-correlator
+server
 
 # Go coverage files
 *.coverprofile

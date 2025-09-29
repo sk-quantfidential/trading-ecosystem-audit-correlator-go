@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"os"
 	"time"
 
@@ -224,14 +223,3 @@ func (r *RedisServiceDiscovery) getServiceID() string {
 	return fmt.Sprintf("%s-%s-%d", hostname, r.serviceInfo.Host, r.serviceInfo.GRPCPort)
 }
 
-// getLocalIP attempts to determine the local IP address
-func getLocalIP() string {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		return ""
-	}
-	defer conn.Close()
-
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP.String()
-}

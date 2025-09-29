@@ -28,6 +28,9 @@ type Config struct {
 
 	// Logging
 	LogLevel string
+
+	// Environment
+	Environment string
 }
 
 func Load() *Config {
@@ -53,6 +56,9 @@ func Load() *Config {
 
 		// Logging
 		LogLevel: getEnv("LOG_LEVEL", "info"),
+
+		// Environment
+		Environment: getEnv("ENVIRONMENT", "development"),
 	}
 }
 

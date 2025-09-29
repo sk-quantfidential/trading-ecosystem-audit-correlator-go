@@ -15,8 +15,10 @@ import (
 
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/config"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/handlers"
+	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/infrastructure"
 	grpcpresentation "github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/presentation/grpc"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/services"
+	"github.com/quantfidential/trading-ecosystem/audit-data-adapter-go/pkg/adapters"
 )
 
 func main() {
@@ -26,11 +28,41 @@ func main() {
 	logger.SetLevel(logrus.InfoLevel)
 	logger.SetFormatter(&logrus.JSONFormatter{})
 
-	auditService := services.NewAuditService(logger)
+	// Initialize data adapter
+	ctx := context.Background()
+	dataAdapter, err := adapters.InitializeAndConnect(ctx, logger)
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to initialize data adapter")
+	}
+	defer func() {
+		if err := dataAdapter.Disconnect(ctx); err != nil {
+			logger.WithError(err).Error("Failed to disconnect data adapter")
+		}
+	}()
 
+	// Initialize service discovery using data adapter
+	serviceDiscovery := infrastructure.NewDataAdapterServiceDiscovery(cfg, dataAdapter, logger)
+	if err := serviceDiscovery.Connect(ctx); err != nil {
+		logger.WithError(err).Fatal("Failed to connect service discovery")
+	}
+	defer func() {
+		if err := serviceDiscovery.Disconnect(ctx); err != nil {
+			logger.WithError(err).Error("Failed to disconnect service discovery")
+		}
+	}()
+
+	// Register service and start heartbeat
+	if err := serviceDiscovery.RegisterService(ctx); err != nil {
+		logger.WithError(err).Fatal("Failed to register service")
+	}
+
+	// Start heartbeat in background
+	go serviceDiscovery.StartHeartbeat(ctx)
+
+	auditService := services.NewAuditServiceWithDataAdapter(dataAdapter, logger)
 
 	grpcServer := grpcpresentation.NewAuditGRPCServer(cfg, auditService, logger)
-	httpServer := setupHTTPServer(cfg, auditService, logger)
+	httpServer := setupHTTPServer(cfg, auditService, logger, dataAdapter)
 
 	go func() {
 		logger.WithField("port", cfg.GRPCPort).Info("Starting gRPC server")
@@ -68,7 +100,7 @@ func main() {
 }
 
 
-func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, logger *logrus.Logger) *http.Server {
+func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, logger *logrus.Logger, dataAdapter adapters.DataAdapter) *http.Server {
 	router := gin.New()
 	router.Use(gin.Recovery())
 

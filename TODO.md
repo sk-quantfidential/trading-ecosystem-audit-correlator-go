@@ -35,22 +35,32 @@
 ---
 
 ### 🔍 Milestone TSE-0001.10: Audit Infrastructure (PRIMARY)
-**Status**: Not Started
+**Status**: ⚡ **IN PROGRESS** - Foundation established, integration needed
 **Priority**: CRITICAL - Enables system validation and correlation
 
 **Tasks**:
+- [x] Fix JSON serialization issues (map[string]interface{} → json.RawMessage)
+- [x] Create comprehensive test automation (Makefile with unit/integration targets)
+- [x] Establish TDD Red-Green-Refactor pattern testing (4 test files, 15+ test scenarios)
+- [ ] **CRITICAL**: Integrate audit-data-adapter-go component for all Redis/PostgreSQL operations
+- [ ] Remove direct Redis/PostgreSQL dependencies (delegate to audit-data-adapter-go)
 - [ ] OpenTelemetry trace collection from all services
 - [ ] Basic event correlation (timeline reconstruction)
 - [ ] Prometheus metrics aggregation
 - [ ] Simple causation analysis (scenario event → system response)
-- [ ] Event storage and indexing
 - [ ] Timeline analysis engine
 - [ ] Correlation reporting
 - [ ] Validation assertion framework
 
+**Current Test Status**:
+- **Unit Tests**: 10 test scenarios (7 passing, 3 skipped - infrastructure dependencies)
+- **Integration Tests**: 5 test scenarios (0 passing, 5 skipped - infrastructure dependencies)
+- **Test Coverage**: Configuration, gRPC server, service discovery patterns established
+- **Build Status**: ✅ Compiles successfully after JSON serialization fix
+
 **BDD Acceptance**: Can correlate a chaos event with subsequent service behavior
 
-**Dependencies**: TSE-0001.3b (Go Services gRPC Integration), TSE-0001.9 (Test Coordination Framework)
+**Dependencies**: TSE-0001.3b (Go Services gRPC Integration), TSE-0001.9 (Test Coordination Framework), **audit-data-adapter-go integration**
 
 ---
 
@@ -81,4 +91,37 @@
 
 ---
 
-**Last Updated**: 2025-09-17
+---
+
+## 🔄 Next Steps: Audit Data Adapter Integration
+
+### Priority Tasks for audit-data-adapter-go Integration:
+
+1. **Remove Direct Database Dependencies**:
+   - Remove direct Redis client imports (`github.com/redis/go-redis/v9`)
+   - Remove direct PostgreSQL imports (`github.com/lib/pq`)
+   - Update go.mod to only depend on audit-data-adapter-go for data operations
+
+2. **Refactor Infrastructure Layer**:
+   - Replace `internal/infrastructure` Redis clients with audit-data-adapter-go DataAdapter
+   - Update service discovery to use DataAdapter.ServiceDiscoveryRepository interface
+   - Update configuration caching to use DataAdapter.CacheRepository interface
+
+3. **Update Service Layer**:
+   - Modify `internal/services/audit.go` to use DataAdapter.AuditEventRepository
+   - Update audit event creation and correlation logic to use repository patterns
+   - Ensure all audit events use proper audit-data-adapter-go models
+
+4. **Test Integration**:
+   - Update test dependencies to use audit-data-adapter-go test utilities
+   - Configure tests to use shared orchestrator database/Redis instances
+   - Validate that all tests pass with delegated data operations
+
+5. **Configuration Integration**:
+   - Update configuration to initialize audit-data-adapter-go DataAdapter
+   - Ensure environment variables align with audit-data-adapter-go patterns
+   - Implement proper connection lifecycle management
+
+---
+
+**Last Updated**: 2025-09-29 (Test status updated, audit-data-adapter-go integration tasks added)
