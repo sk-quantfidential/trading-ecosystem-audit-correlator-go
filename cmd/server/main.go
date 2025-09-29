@@ -108,12 +108,26 @@ func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, lo
 	router := gin.New()
 	router.Use(gin.Recovery())
 
-	healthHandler := handlers.NewHealthHandler(logger)
+	// Initialize handlers
+	healthHandler := handlers.NewHealthHandlerWithAuditService(auditService, logger)
+	auditHandler := handlers.NewAuditHandler(auditService, logger)
 
 	v1 := router.Group("/api/v1")
 	{
+		// Health endpoints
 		v1.GET("/health", healthHandler.Health)
 		v1.GET("/ready", healthHandler.Ready)
+
+		// Audit endpoints
+		audit := v1.Group("/audit")
+		{
+			audit.POST("/events", auditHandler.LogEvent)
+			audit.GET("/correlations", auditHandler.CorrelateEvents)
+			audit.GET("/events/trace/:trace_id", auditHandler.GetEventsByTraceID)
+			audit.GET("/events/service", auditHandler.GetEventsByServiceType)
+			audit.POST("/correlations", auditHandler.CreateCorrelation)
+			audit.GET("/status", auditHandler.GetAuditStatus)
+		}
 	}
 
 	return &http.Server{
