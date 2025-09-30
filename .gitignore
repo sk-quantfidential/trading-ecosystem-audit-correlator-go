@@ -1,32 +1,46 @@
+# Wrong PR file names
 PULL_*.md
 PR_*.md
 
-# Go
+# Binaries for programs and plugins
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+
+# Test binary, built with `go test -c`
 *.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Go workspace file
 go.work
 go.work.sum
-
-# Binary output
-audit-correlator
-/audit-correlator
-server
 
 # Go coverage files
 *.coverprofile
 coverage.html
 coverage.out
+profile.cov
 
 # Go vendor directory
 vendor/
 
-# Go module cache
-go.sum
+# Build artifacts
+audit-correlator
+/audit-correlator
+server
+
+# Environment files (DO NOT COMMIT SECRETS)
+.env
+.env.local
+.env.*.local
+
+# Local configuration files (DO NOT COMMIT SECRETS)
+config.local.yaml
+config.local.json
 
 # IDE files
 .vscode/
@@ -35,7 +49,7 @@ go.sum
 *.swo
 *~
 
-# OS files
+# OS generated files
 .DS_Store
 .DS_Store?
 ._*
@@ -48,10 +62,9 @@ Thumbs.db
 *.log
 logs/
 
-# Environment files (contains secrets)
-.env
-.env.local
-.env.*.local
+# Build artifacts
+/bin/
+/dist/
 
 # Claude Configuration (IP separated)
 .claude-defaults/
@@ -59,3 +72,5 @@ logs/
 .claude_*
 .gitmodules
 CLAUDE.md
+proto/
+

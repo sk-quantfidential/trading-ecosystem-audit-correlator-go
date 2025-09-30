@@ -2,19 +2,25 @@
 FROM golang:1.24-alpine AS builder
 
 # Set working directory
-WORKDIR /app
+WORKDIR /build
 
 # Install git and ca-certificates (needed for dependency fetching)
 RUN apk add --no-cache git ca-certificates
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Copy audit-data-adapter-go dependency first (from parent context)
+COPY audit-data-adapter-go/ ./audit-data-adapter-go/
 
-# Download dependencies
+# Copy audit-correlator-go files
+COPY audit-correlator-go/go.mod audit-correlator-go/go.sum ./audit-correlator-go/
+
+# Set working directory to audit-correlator-go
+WORKDIR /build/audit-correlator-go
+
+# Download dependencies (now can find ../audit-data-adapter-go)
 RUN go mod download
 
 # Copy source code
-COPY . .
+COPY audit-correlator-go/ .
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o audit-correlator ./cmd/server
@@ -33,7 +39,7 @@ RUN addgroup -g 1001 -S appgroup && \
 WORKDIR /app
 
 # Copy binary from builder stage
-COPY --from=builder /app/audit-correlator /app/audit-correlator
+COPY --from=builder /build/audit-correlator-go/audit-correlator /app/audit-correlator
 
 # Change ownership to non-root user
 RUN chown -R appuser:appgroup /app
