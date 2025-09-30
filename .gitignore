@@ -48,6 +48,11 @@ Thumbs.db
 *.log
 logs/
 
+# Environment files (contains secrets)
+.env
+.env.local
+.env.*.local
+
 # Claude Configuration (IP separated)
 .claude-defaults/
 .claude/

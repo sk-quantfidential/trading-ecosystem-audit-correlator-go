@@ -2,25 +2,40 @@
 
 .PHONY: help test test-unit test-integration test-all build clean lint
 
+# Load environment variables from .env file if it exists
+ifneq (,$(wildcard .env))
+	include .env
+	export
+endif
+
 # Default target
 help: ## Show this help message
 	@echo "Available targets:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+# Environment setup
+check-env: ## Check if .env file exists
+	@if [ ! -f .env ]; then \
+		echo "Warning: .env file not found. Copy .env.example to .env and configure."; \
+		echo "  cp .env.example .env"; \
+		exit 1; \
+	fi
+	@echo ".env file found ✓"
 
 # Test targets
 test: test-unit ## Run unit tests (default)
 
 test-unit: ## Run unit tests only
 	@echo "Running unit tests..."
-	go test -tags=unit ./internal/... -v
+	@if [ -f .env ]; then set -a && . ./.env && set +a; fi && go test -tags=unit ./internal/... -v
 
-test-integration: ## Run integration tests only
+test-integration: check-env ## Run integration tests only (requires .env)
 	@echo "Running integration tests..."
-	go test -tags=integration ./internal/... -v
+	@set -a && . ./.env && set +a && go test -tags=integration ./internal/... -v
 
-test-all: ## Run all tests (unit + integration)
+test-all: check-env ## Run all tests (unit + integration)
 	@echo "Running all tests..."
-	go test -tags="unit integration" ./internal/... -v
+	@set -a && . ./.env && set +a && go test -tags="unit integration" ./internal/... -v
 
 test-short: ## Run tests in short mode (skip slow tests)
 	@echo "Running tests in short mode..."
