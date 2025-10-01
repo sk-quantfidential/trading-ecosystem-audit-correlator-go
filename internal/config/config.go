@@ -1,9 +1,14 @@
 package config
 
 import (
+	"context"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/quantfidential/trading-ecosystem/audit-data-adapter-go/pkg/adapters"
 )
 
 type Config struct {
@@ -28,6 +33,12 @@ type Config struct {
 
 	// Logging
 	LogLevel string
+
+	// Environment
+	Environment string
+
+	// DataAdapter - initialized during Load()
+	dataAdapter adapters.DataAdapter
 }
 
 func Load() *Config {
@@ -53,6 +64,9 @@ func Load() *Config {
 
 		// Logging
 		LogLevel: getEnv("LOG_LEVEL", "info"),
+
+		// Environment
+		Environment: getEnv("ENVIRONMENT", "development"),
 	}
 }
 
@@ -79,4 +93,45 @@ func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
 		}
 	}
 	return defaultValue
+}
+
+// InitializeDataAdapter initializes the DataAdapter with logging
+func (c *Config) InitializeDataAdapter(ctx context.Context, logger *logrus.Logger) error {
+	if c.dataAdapter != nil {
+		return nil // Already initialized
+	}
+
+	adapter, err := adapters.NewAuditDataAdapterFromEnv(logger)
+	if err != nil {
+		logger.WithError(err).Warn("Failed to create DataAdapter from environment, using defaults")
+		// Fallback to defaults for development
+		adapter, err = adapters.NewAuditDataAdapterWithDefaults(logger)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Connect to the adapter
+	if err := adapter.Connect(ctx); err != nil {
+		logger.WithError(err).Warn("Failed to connect DataAdapter - continuing with stub")
+		// Continue without adapter - will use stubs
+		return nil
+	}
+
+	c.dataAdapter = adapter
+	logger.Info("DataAdapter initialized and connected successfully")
+	return nil
+}
+
+// GetDataAdapter returns the initialized DataAdapter (may be nil)
+func (c *Config) GetDataAdapter() adapters.DataAdapter {
+	return c.dataAdapter
+}
+
+// DisconnectDataAdapter safely disconnects the DataAdapter
+func (c *Config) DisconnectDataAdapter(ctx context.Context) error {
+	if c.dataAdapter != nil {
+		return c.dataAdapter.Disconnect(ctx)
+	}
+	return nil
 }

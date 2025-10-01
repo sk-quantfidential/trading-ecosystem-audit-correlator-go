@@ -15,6 +15,7 @@ import (
 
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/config"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/handlers"
+	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/infrastructure"
 	grpcpresentation "github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/presentation/grpc"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/services"
 )
@@ -26,8 +27,43 @@ func main() {
 	logger.SetLevel(logrus.InfoLevel)
 	logger.SetFormatter(&logrus.JSONFormatter{})
 
-	auditService := services.NewAuditService(logger)
+	// Initialize data adapter at config level
+	ctx := context.Background()
+	if err := cfg.InitializeDataAdapter(ctx, logger); err != nil {
+		logger.WithError(err).Warn("Failed to initialize DataAdapter - continuing with stub mode")
+	}
+	defer func() {
+		if err := cfg.DisconnectDataAdapter(ctx); err != nil {
+			logger.WithError(err).Error("Failed to disconnect DataAdapter")
+		}
+	}()
 
+	// Initialize service discovery (will use DataAdapter if available)
+	serviceDiscovery := infrastructure.NewServiceDiscovery(cfg, logger)
+	if err := serviceDiscovery.Connect(ctx); err != nil {
+		logger.WithError(err).Fatal("Failed to connect service discovery")
+	}
+	defer func() {
+		if err := serviceDiscovery.Disconnect(ctx); err != nil {
+			logger.WithError(err).Error("Failed to disconnect service discovery")
+		}
+	}()
+
+	// Register service and start heartbeat
+	if err := serviceDiscovery.RegisterService(ctx); err != nil {
+		logger.WithError(err).Warn("Failed to register service - continuing in stub mode")
+	}
+
+	// Start heartbeat in background
+	go serviceDiscovery.StartHeartbeat(ctx)
+
+	// Initialize audit service (will use DataAdapter if available)
+	var auditService *services.AuditService
+	if dataAdapter := cfg.GetDataAdapter(); dataAdapter != nil {
+		auditService = services.NewAuditServiceWithDataAdapter(dataAdapter, logger)
+	} else {
+		auditService = services.NewAuditService(logger)
+	}
 
 	grpcServer := grpcpresentation.NewAuditGRPCServer(cfg, auditService, logger)
 	httpServer := setupHTTPServer(cfg, auditService, logger)
@@ -72,12 +108,26 @@ func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, lo
 	router := gin.New()
 	router.Use(gin.Recovery())
 
-	healthHandler := handlers.NewHealthHandler(logger)
+	// Initialize handlers
+	healthHandler := handlers.NewHealthHandlerWithAuditService(auditService, logger)
+	auditHandler := handlers.NewAuditHandler(auditService, logger)
 
 	v1 := router.Group("/api/v1")
 	{
+		// Health endpoints
 		v1.GET("/health", healthHandler.Health)
 		v1.GET("/ready", healthHandler.Ready)
+
+		// Audit endpoints
+		audit := v1.Group("/audit")
+		{
+			audit.POST("/events", auditHandler.LogEvent)
+			audit.GET("/correlations", auditHandler.CorrelateEvents)
+			audit.GET("/events/trace/:trace_id", auditHandler.GetEventsByTraceID)
+			audit.GET("/events/service", auditHandler.GetEventsByServiceType)
+			audit.POST("/correlations", auditHandler.CreateCorrelation)
+			audit.GET("/status", auditHandler.GetAuditStatus)
+		}
 	}
 
 	return &http.Server{

@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/config"
+	"github.com/quantfidential/trading-ecosystem/audit-data-adapter-go/pkg/adapters"
 )
 
 // ConfigValueType represents the type of a configuration value
@@ -65,22 +66,16 @@ type ConfigurationClient interface {
 	GetCacheStats() CacheStats
 }
 
-// HTTPConfigurationClient implements ConfigurationClient using HTTP
+// HTTPConfigurationClient implements ConfigurationClient using HTTP with DataAdapter caching
 type HTTPConfigurationClient struct {
-	config     *config.Config
-	httpClient *http.Client
-	logger     *logrus.Logger
+	config      *config.Config
+	httpClient  *http.Client
+	logger      *logrus.Logger
+	dataAdapter adapters.DataAdapter
 
-	// Cache management
-	cache      map[string]cachedValue
-	cacheMutex sync.RWMutex
+	// Cache stats (using DataAdapter for actual caching)
 	cacheStats CacheStats
 	statsMutex sync.RWMutex
-}
-
-type cachedValue struct {
-	value     ConfigurationValue
-	expiresAt time.Time
 }
 
 // configResponse represents the HTTP response from configuration service
@@ -92,7 +87,7 @@ type configResponse struct {
 	LastUpdated string `json:"last_updated"`
 }
 
-// NewConfigurationClient creates a new HTTP-based configuration client
+// NewConfigurationClient creates a new HTTP-based configuration client with DataAdapter caching
 func NewConfigurationClient(cfg *config.Config, logger *logrus.Logger) ConfigurationClient {
 	if logger == nil {
 		logger = logrus.New()
@@ -104,8 +99,8 @@ func NewConfigurationClient(cfg *config.Config, logger *logrus.Logger) Configura
 		httpClient: &http.Client{
 			Timeout: cfg.RequestTimeout,
 		},
-		logger: logger,
-		cache:  make(map[string]cachedValue),
+		logger:      logger,
+		dataAdapter: cfg.GetDataAdapter(),
 	}
 }
 
@@ -135,21 +130,30 @@ func (c *HTTPConfigurationClient) Connect(ctx context.Context) error {
 
 // Disconnect closes the connection to the configuration service
 func (c *HTTPConfigurationClient) Disconnect(ctx context.Context) error {
-	// Clear cache
-	c.cacheMutex.Lock()
-	c.cache = make(map[string]cachedValue)
-	c.cacheMutex.Unlock()
+	// Clear cache via DataAdapter if available
+	if c.dataAdapter != nil {
+		pattern := fmt.Sprintf("config:%s:*", c.config.ServiceName)
+		if _, err := c.dataAdapter.DeleteByPattern(ctx, pattern); err != nil {
+			c.logger.WithError(err).Warn("Failed to clear configuration cache")
+		}
+	}
 
 	c.logger.Info("Disconnected from configuration service")
 	return nil
 }
 
-// GetConfiguration retrieves a configuration value with caching
+// GetConfiguration retrieves a configuration value with caching via DataAdapter
 func (c *HTTPConfigurationClient) GetConfiguration(ctx context.Context, key string) (ConfigurationValue, error) {
-	// Check cache first
-	if cachedVal, found := c.getCachedValue(key); found {
-		c.incrementCacheHits()
-		return cachedVal, nil
+	cacheKey := fmt.Sprintf("config:%s:%s", c.config.ServiceName, key)
+
+	// Check cache first via DataAdapter
+	if c.dataAdapter != nil {
+		var cachedValue ConfigurationValue
+		if err := c.dataAdapter.Get(ctx, cacheKey, &cachedValue); err == nil {
+			c.incrementCacheHits()
+			c.logger.WithField("key", key).Debug("Configuration cache hit via DataAdapter")
+			return cachedValue, nil
+		}
 	}
 
 	c.incrementCacheMisses()
@@ -184,8 +188,14 @@ func (c *HTTPConfigurationClient) GetConfiguration(ctx context.Context, key stri
 	// Convert response to ConfigurationValue
 	configValue := c.convertResponse(configResp)
 
-	// Cache the value
-	c.cacheValue(key, configValue)
+	// Cache the value via DataAdapter
+	if c.dataAdapter != nil {
+		if err := c.dataAdapter.Set(ctx, cacheKey, configValue, c.config.CacheTTL); err != nil {
+			c.logger.WithError(err).Warn("Failed to cache configuration value via DataAdapter")
+		} else {
+			c.logger.WithField("key", key).Debug("Configuration cached via DataAdapter")
+		}
+	}
 
 	return configValue, nil
 }
@@ -195,12 +205,16 @@ func (c *HTTPConfigurationClient) GetCacheStats() CacheStats {
 	c.statsMutex.RLock()
 	defer c.statsMutex.RUnlock()
 
-	c.cacheMutex.RLock()
-	cacheSize := len(c.cache)
-	c.cacheMutex.RUnlock()
-
 	stats := c.cacheStats
-	stats.CacheSize = cacheSize
+
+	// Get cache size from DataAdapter if available
+	if c.dataAdapter != nil {
+		ctx := context.Background()
+		pattern := fmt.Sprintf("config:%s:*", c.config.ServiceName)
+		if keys, err := c.dataAdapter.GetKeysByPattern(ctx, pattern); err == nil {
+			stats.CacheSize = len(keys)
+		}
+	}
 
 	total := stats.CacheHits + stats.CacheMisses
 	if total > 0 {
@@ -208,36 +222,6 @@ func (c *HTTPConfigurationClient) GetCacheStats() CacheStats {
 	}
 
 	return stats
-}
-
-// getCachedValue retrieves a value from cache if not expired
-func (c *HTTPConfigurationClient) getCachedValue(key string) (ConfigurationValue, bool) {
-	c.cacheMutex.RLock()
-	defer c.cacheMutex.RUnlock()
-
-	cached, exists := c.cache[key]
-	if !exists {
-		return ConfigurationValue{}, false
-	}
-
-	if time.Now().After(cached.expiresAt) {
-		// Value expired, remove from cache
-		delete(c.cache, key)
-		return ConfigurationValue{}, false
-	}
-
-	return cached.value, true
-}
-
-// cacheValue stores a value in cache with TTL
-func (c *HTTPConfigurationClient) cacheValue(key string, value ConfigurationValue) {
-	c.cacheMutex.Lock()
-	defer c.cacheMutex.Unlock()
-
-	c.cache[key] = cachedValue{
-		value:     value,
-		expiresAt: time.Now().Add(c.config.CacheTTL),
-	}
 }
 
 // incrementCacheHits increments the cache hit counter
