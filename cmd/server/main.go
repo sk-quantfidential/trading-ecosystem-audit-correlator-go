@@ -27,6 +27,15 @@ func main() {
 	logger.SetLevel(logrus.InfoLevel)
 	logger.SetFormatter(&logrus.JSONFormatter{})
 
+	// Add instance context to all logs
+	logger = logger.WithFields(logrus.Fields{
+		"service_name":  cfg.ServiceName,
+		"instance_name": cfg.ServiceInstanceName,
+		"environment":   cfg.Environment,
+	}).Logger
+
+	logger.Info("Starting audit-correlator service")
+
 	// Initialize data adapter at config level
 	ctx := context.Background()
 	if err := cfg.InitializeDataAdapter(ctx, logger); err != nil {
