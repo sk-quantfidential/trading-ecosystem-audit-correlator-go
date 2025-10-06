@@ -55,7 +55,7 @@ func NewServiceDiscovery(cfg *config.Config, logger *logrus.Logger) ServiceDisco
 
 	// Create service registration
 	serviceInfo := &models.ServiceRegistration{
-		ID:       fmt.Sprintf("%s-%s", cfg.ServiceName, getServiceInstanceID()),
+		ID:       cfg.ServiceInstanceName, // Use instance name directly as ID
 		Name:     cfg.ServiceName,
 		Version:  cfg.ServiceVersion,
 		Host:     host,
@@ -63,8 +63,10 @@ func NewServiceDiscovery(cfg *config.Config, logger *logrus.Logger) ServiceDisco
 		HTTPPort: cfg.HTTPPort,
 		Status:   "healthy",
 		Metadata: map[string]string{
-			"environment": cfg.Environment,
-			"log_level":   cfg.LogLevel,
+			"environment":   cfg.Environment,
+			"log_level":     cfg.LogLevel,
+			"service_type":  cfg.ServiceName,         // Service type (e.g., "audit-correlator")
+			"instance_name": cfg.ServiceInstanceName, // Instance identifier (e.g., "audit-correlator")
 		},
 		LastSeen:     time.Now(),
 		RegisteredAt: time.Now(),
