@@ -117,8 +117,8 @@ func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, lo
 	router := gin.New()
 	router.Use(gin.Recovery())
 
-	// Initialize handlers
-	healthHandler := handlers.NewHealthHandlerWithAuditService(auditService, logger)
+	// Initialize handlers with config for instance-aware health checks
+	healthHandler := handlers.NewHealthHandlerWithConfig(cfg, auditService, logger)
 	auditHandler := handlers.NewAuditHandler(auditService, logger)
 
 	v1 := router.Group("/api/v1")

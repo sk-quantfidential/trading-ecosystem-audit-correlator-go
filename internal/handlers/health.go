@@ -2,14 +2,17 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
+	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/config"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/services"
 )
 
 type HealthHandler struct {
+	config       *config.Config
 	logger       *logrus.Logger
 	auditService *services.AuditService
 }
@@ -27,12 +30,34 @@ func NewHealthHandlerWithAuditService(auditService *services.AuditService, logge
 	}
 }
 
+// NewHealthHandlerWithConfig creates a health handler with full config access
+func NewHealthHandlerWithConfig(cfg *config.Config, auditService *services.AuditService, logger *logrus.Logger) *HealthHandler {
+	return &HealthHandler{
+		config:       cfg,
+		logger:       logger,
+		auditService: auditService,
+	}
+}
+
 func (h *HealthHandler) Health(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "healthy",
-		"service": "audit-correlator",
-		"version": "1.0.0",
-	})
+	response := gin.H{
+		"status": "healthy",
+	}
+
+	// Add instance information if config is available
+	if h.config != nil {
+		response["service"] = h.config.ServiceName
+		response["instance"] = h.config.ServiceInstanceName
+		response["version"] = h.config.ServiceVersion
+		response["environment"] = h.config.Environment
+		response["timestamp"] = time.Now().UTC()
+	} else {
+		// Fallback for backward compatibility
+		response["service"] = "audit-correlator"
+		response["version"] = "1.0.0"
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *HealthHandler) Ready(c *gin.Context) {
