@@ -16,6 +16,7 @@ import (
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/config"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/handlers"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/infrastructure"
+	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/infrastructure/observability"
 	grpcpresentation "github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/presentation/grpc"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/services"
 )
@@ -117,9 +118,24 @@ func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, lo
 	router := gin.New()
 	router.Use(gin.Recovery())
 
-	// Initialize handlers with config for instance-aware health checks
+	// Initialize observability (Clean Architecture: port + adapter)
+	constantLabels := map[string]string{
+		"service":  cfg.ServiceName,
+		"instance": cfg.ServiceInstanceName,
+		"version":  cfg.Version,
+	}
+	metricsPort := observability.NewPrometheusMetricsAdapter(constantLabels)
+
+	// Add RED metrics middleware (Rate, Errors, Duration)
+	router.Use(observability.REDMetricsMiddleware(metricsPort))
+
+	// Initialize handlers
 	healthHandler := handlers.NewHealthHandlerWithConfig(cfg, auditService, logger)
 	auditHandler := handlers.NewAuditHandler(auditService, logger)
+	metricsHandler := handlers.NewMetricsHandler(metricsPort)
+
+	// Observability endpoints (separate from business logic)
+	router.GET("/metrics", metricsHandler.Metrics)
 
 	v1 := router.Group("/api/v1")
 	{

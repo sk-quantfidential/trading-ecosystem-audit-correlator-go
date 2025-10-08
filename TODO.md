@@ -64,6 +64,49 @@
 
 ---
 
+### 📊 Milestone TSE-0001.12.0b: Prometheus Metrics (Clean Architecture)
+**Status**: ✅ **COMPLETED** (2025-10-08)
+**Priority**: High
+**Branch**: `feature/TSE-0001.12.0-prometheus-metric-client`
+
+**Tasks**:
+- [x] Define MetricsPort interface in domain/ports (Clean Architecture principle)
+- [x] Implement PrometheusMetricsAdapter in infrastructure/observability
+- [x] Create RED metrics middleware (Rate, Errors, Duration)
+- [x] Update /metrics endpoint to use port/adapter pattern
+- [x] Add constant labels (service, instance, version)
+- [x] Implement low-cardinality request labels (method, route, code)
+- [x] Comprehensive BDD unit tests for all components
+- [x] Integration with main.go using dependency injection
+
+**Clean Architecture Benefits**:
+- ✅ Domain layer never knows about Prometheus (depends on interface)
+- ✅ Future OpenTelemetry migration: swap adapter, keep interface
+- ✅ Testable with mock MetricsPort
+- ✅ Single Responsibility: observability separated from business logic
+
+**RED Pattern Metrics**:
+- `http_requests_total` (counter): Total requests by method, route, code
+- `http_request_duration_seconds` (histogram): Request latency with sensible buckets
+- `http_request_errors_total` (counter): Errors (4xx, 5xx) by method, route, code
+
+**Labels** (Low Cardinality):
+- **Constant**: service, instance, version (set at startup)
+- **Request**: method (GET/POST), route (pattern not path), code (200/404/500)
+
+**Test Coverage**:
+- ✅ 4 handler test scenarios (metrics endpoint, content type, runtime metrics, Prometheus format)
+- ✅ 4 middleware test scenarios (successful requests, errors, route patterns, unknown routes)
+- ✅ All tests follow BDD Given/When/Then pattern
+
+**BDD Acceptance**: Prometheus successfully scrapes /metrics endpoint with RED metrics and low-cardinality labels
+
+**Dependencies**: TSE-0001.12.0 (Multi-Instance Infrastructure Foundation)
+
+**Future Work**: Phase 2 - Swap PrometheusMetricsAdapter for OtelMetricsAdapter (no domain changes)
+
+---
+
 ### 📈 Milestone TSE-0001.12c: Audit Integration
 **Status**: Not Started
 **Priority**: Medium
