@@ -330,8 +330,8 @@ audit-correlator:
   image: audit-correlator:latest
   container_name: trading-ecosystem-audit-correlator
   ports:
-    - "127.0.0.1:8083:8083"  # HTTP
-    - "127.0.0.1:9093:9093"  # gRPC
+    - "127.0.0.1:8082:8080"  # HTTP
+    - "127.0.0.1:50052:50051"  # gRPC
   networks:
     trading-ecosystem:
       ipv4_address: 172.20.0.80

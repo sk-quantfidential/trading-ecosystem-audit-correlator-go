@@ -35,7 +35,7 @@ func TestREDMetricsMiddleware(t *testing.T) {
 		})
 
 		// When: A successful request is made
-		req := httptest.NewRequest(http.MethodGET, "/api/v1/health", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -46,7 +46,7 @@ func TestREDMetricsMiddleware(t *testing.T) {
 
 		// And: Metrics should be recorded
 		// Get metrics output
-		metricsReq := httptest.NewRequest(http.MethodGET, "/metrics", nil)
+		metricsReq := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 		metricsW := httptest.NewRecorder()
 		metricsPort.GetHTTPHandler().ServeHTTP(metricsW, metricsReq)
 		metricsOutput := metricsW.Body.String()
@@ -102,7 +102,7 @@ func TestREDMetricsMiddleware(t *testing.T) {
 		// (no route defined, so Gin returns 404)
 
 		// When: A request to non-existent endpoint is made
-		req := httptest.NewRequest(http.MethodGET, "/nonexistent", nil)
+		req := httptest.NewRequest(http.MethodGet, "/nonexistent", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -112,7 +112,7 @@ func TestREDMetricsMiddleware(t *testing.T) {
 		}
 
 		// And: Error metrics should be recorded
-		metricsReq := httptest.NewRequest(http.MethodGET, "/metrics", nil)
+		metricsReq := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 		metricsW := httptest.NewRecorder()
 		metricsPort.GetHTTPHandler().ServeHTTP(metricsW, metricsReq)
 		metricsOutput := metricsW.Body.String()
@@ -150,7 +150,7 @@ func TestREDMetricsMiddleware(t *testing.T) {
 		// When: Multiple requests with different IDs are made
 		ids := []string{"123", "456", "789"}
 		for _, id := range ids {
-			req := httptest.NewRequest(http.MethodGET, "/api/v1/events/"+id, nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/events/"+id, nil)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -160,7 +160,7 @@ func TestREDMetricsMiddleware(t *testing.T) {
 		}
 
 		// Then: Metrics should use route pattern, not full path
-		metricsReq := httptest.NewRequest(http.MethodGET, "/metrics", nil)
+		metricsReq := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 		metricsW := httptest.NewRecorder()
 		metricsPort.GetHTTPHandler().ServeHTTP(metricsW, metricsReq)
 		metricsOutput := metricsW.Body.String()
@@ -191,12 +191,12 @@ func TestREDMetricsMiddleware(t *testing.T) {
 		router.Use(observability.REDMetricsMiddleware(metricsPort))
 
 		// When: A request to unknown route is made
-		req := httptest.NewRequest(http.MethodGET, "/unknown", nil)
+		req := httptest.NewRequest(http.MethodGet, "/unknown", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
 		// Then: Metrics should use "unknown" for empty route
-		metricsReq := httptest.NewRequest(http.MethodGET, "/metrics", nil)
+		metricsReq := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 		metricsW := httptest.NewRecorder()
 		metricsPort.GetHTTPHandler().ServeHTTP(metricsW, metricsReq)
 		metricsOutput := metricsW.Body.String()

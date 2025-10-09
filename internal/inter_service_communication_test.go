@@ -27,10 +27,10 @@ func TestInterServiceCommunication_RiskMonitorIntegration(t *testing.T) {
 			RedisURL:                "redis://localhost:6379",
 			ConfigurationServiceURL: "http://localhost:8090",
 			RequestTimeout:          5 * time.Second,
-			CacheTTL:               5 * time.Minute,
+			CacheTTL:                5 * time.Minute,
 			HealthCheckInterval:     30 * time.Second,
-			GRPCPort:               9093,
-			HTTPPort:               8083,
+			GRPCPort:                9093,
+			HTTPPort:                8083,
 		}
 
 		clientManager := infrastructure.NewInterServiceClientManager(cfg, nil)
@@ -77,10 +77,10 @@ func TestInterServiceCommunication_TradingEngineIntegration(t *testing.T) {
 			RedisURL:                "redis://localhost:6379",
 			ConfigurationServiceURL: "http://localhost:8090",
 			RequestTimeout:          5 * time.Second,
-			CacheTTL:               5 * time.Minute,
+			CacheTTL:                5 * time.Minute,
 			HealthCheckInterval:     30 * time.Second,
-			GRPCPort:               9093,
-			HTTPPort:               8083,
+			GRPCPort:                9093,
+			HTTPPort:                8083,
 		}
 
 		clientManager := infrastructure.NewInterServiceClientManager(cfg, nil)
@@ -127,10 +127,10 @@ func TestInterServiceCommunication_ServiceDiscovery(t *testing.T) {
 			RedisURL:                "redis://localhost:6379",
 			ConfigurationServiceURL: "http://localhost:8090",
 			RequestTimeout:          5 * time.Second,
-			CacheTTL:               5 * time.Minute,
+			CacheTTL:                5 * time.Minute,
 			HealthCheckInterval:     30 * time.Second,
-			GRPCPort:               9093,
-			HTTPPort:               8083,
+			GRPCPort:                9093,
+			HTTPPort:                8083,
 		}
 
 		clientManager := infrastructure.NewInterServiceClientManager(cfg, nil)
@@ -181,10 +181,10 @@ func TestInterServiceCommunication_ConnectionPooling(t *testing.T) {
 			RedisURL:                "redis://localhost:6379",
 			ConfigurationServiceURL: "http://localhost:8090",
 			RequestTimeout:          5 * time.Second,
-			CacheTTL:               5 * time.Minute,
+			CacheTTL:                5 * time.Minute,
 			HealthCheckInterval:     30 * time.Second,
-			GRPCPort:               9093,
-			HTTPPort:               8083,
+			GRPCPort:                9093,
+			HTTPPort:                8083,
 		}
 
 		clientManager := infrastructure.NewInterServiceClientManager(cfg, nil)
@@ -242,10 +242,10 @@ func TestInterServiceCommunication_ErrorHandling(t *testing.T) {
 			RedisURL:                "redis://localhost:6379",
 			ConfigurationServiceURL: "http://localhost:8090",
 			RequestTimeout:          1 * time.Second,
-			CacheTTL:               5 * time.Minute,
+			CacheTTL:                5 * time.Minute,
 			HealthCheckInterval:     30 * time.Second,
-			GRPCPort:               9093,
-			HTTPPort:               8083,
+			GRPCPort:                9093,
+			HTTPPort:                8083,
 		}
 
 		clientManager := infrastructure.NewInterServiceClientManager(cfg, nil)
@@ -271,4 +271,3 @@ func TestInterServiceCommunication_ErrorHandling(t *testing.T) {
 		}
 	})
 }
-

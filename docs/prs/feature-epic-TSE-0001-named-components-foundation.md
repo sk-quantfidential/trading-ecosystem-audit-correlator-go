@@ -59,7 +59,7 @@ func Load() *Config {
     cfg := &Config{
         ServiceName:         getEnv("SERVICE_NAME", "audit-correlator"),
         ServiceInstanceName: getEnv("SERVICE_INSTANCE_NAME", ""),
-        HTTPPort:            getEnvAsInt("HTTP_PORT", 8083),
+        HTTPPort:            getEnvAsInt("HTTP_PORT", 8080),
         GRPCPort:            getEnvAsInt("GRPC_PORT", 50051),
         Environment:         getEnv("ENVIRONMENT", "development"),
         Version:             getEnv("VERSION", "1.0.0"),
@@ -174,8 +174,8 @@ services:
       - ./data/audit-correlator:/app/data
       - ./logs/audit-correlator:/app/logs
     ports:
-      - "8083:8083"
-      - "50051:50051"
+      - "8082:8080"
+      - "50052:50051"
 ```
 
 **Rationale:**

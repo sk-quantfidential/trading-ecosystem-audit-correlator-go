@@ -48,7 +48,7 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 # Expose ports
-EXPOSE 8083 9093
+EXPOSE 8080 50051
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
