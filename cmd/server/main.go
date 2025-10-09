@@ -122,7 +122,7 @@ func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, lo
 	constantLabels := map[string]string{
 		"service":  cfg.ServiceName,
 		"instance": cfg.ServiceInstanceName,
-		"version":  cfg.Version,
+		"version":  cfg.ServiceVersion,
 	}
 	metricsPort := observability.NewPrometheusMetricsAdapter(constantLabels)
 

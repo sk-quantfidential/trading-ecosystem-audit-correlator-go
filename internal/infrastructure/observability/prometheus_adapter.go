@@ -10,6 +10,9 @@ import (
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/domain/ports"
 )
 
+// Compile-time check to ensure PrometheusMetricsAdapter implements MetricsPort
+var _ ports.MetricsPort = (*PrometheusMetricsAdapter)(nil)
+
 // PrometheusMetricsAdapter implements the MetricsPort using Prometheus client library
 // This adapter can be swapped with OpenTelemetry in the future without changing domain logic
 type PrometheusMetricsAdapter struct {
