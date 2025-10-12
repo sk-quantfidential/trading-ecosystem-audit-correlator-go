@@ -540,6 +540,35 @@ cp internal/infrastructure/observability/middleware_test.go ../other-service-go/
 - `go.mod` (added Prometheus client dependencies)
 - `go.sum` (dependency checksums)
 
+## Integration Testing (Added 2025-10-10)
+
+**New File:** `tests/data_adapter_smoke_test.go` (114 lines)
+
+**Purpose:** Minimal smoke tests to verify data adapter integration with infrastructure
+
+**Test Coverage:**
+1. ✅ **adapter_initialization**: Verifies adapter creation and connection
+2. ✅ **cache_repository_smoke**: Tests basic cache Set/Get/Delete operations
+3. ⏭️ **audit_event_repository_basic_crud**: Deferred (requires UUID generation)
+4. ⏭️ **service_discovery_smoke**: Deferred (requires Redis ACL enhancement)
+
+**Features:**
+- Tagged with `//go:build integration` for selective execution
+- Graceful skips when infrastructure unavailable
+- Uses orchestrator credentials for integration testing
+- Time-based unique keys to prevent test collisions
+
+**Running Tests:**
+```bash
+# Run integration tests
+make test-integration
+
+# Run all tests
+make test-all
+```
+
+This brings audit-correlator-go to parity with exchange-simulator-go for minimal integration testing.
+
 ## Merge Checklist
 
 - [x] Clean Architecture port/adapter pattern implemented
