@@ -19,7 +19,6 @@ The audit-correlator is a **singleton service** but implements the multi-instanc
 
 ## Audit-Correlator-Go Repository Changes
 
-
 ## What Changed
 
 See detailed commit-by-commit changes documented in the sections below.
@@ -30,7 +29,6 @@ All validation checks pass:
 - `scripts/validate-all.sh` - All checks passing
 - Unit tests passing
 - Integration tests passing
-
 
 ### Commit Summary
 
