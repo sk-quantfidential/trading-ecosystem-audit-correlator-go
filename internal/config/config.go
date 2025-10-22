@@ -13,8 +13,9 @@ import (
 
 type Config struct {
 	// Service Identity
-	ServiceName    string
-	ServiceVersion string
+	ServiceName         string // "audit-correlator" (service type)
+	ServiceInstanceName string // "audit-correlator" (instance identifier)
+	ServiceVersion      string
 
 	// Network Configuration
 	HTTPPort int
@@ -44,7 +45,9 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		// Service Identity
-		ServiceName:    getEnv("SERVICE_NAME", "audit-correlator"),
+		ServiceName:         getEnv("SERVICE_NAME", "audit-correlator"),
+		ServiceInstanceName: getEnv("SERVICE_INSTANCE_NAME",
+			getEnv("SERVICE_NAME", "audit-correlator")),
 		ServiceVersion: getEnv("SERVICE_VERSION", "1.0.0"),
 
 		// Network Configuration
