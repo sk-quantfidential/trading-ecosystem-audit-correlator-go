@@ -59,7 +59,7 @@ This PR implements Prometheus metrics collection using **Clean Architecture prin
 Future: Swap for OtelMetricsAdapter without changing domain/presentation
 ```
 
-## Changes
+## What Changed
 
 ### 1. Domain Layer - MetricsPort Interface
 
