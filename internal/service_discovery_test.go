@@ -25,8 +25,8 @@ func TestServiceDiscovery_Connect(t *testing.T) {
 				ServiceName:         "audit-correlator",
 				ServiceVersion:      "1.0.0",
 				RedisURL:            "redis://localhost:6379",
-				GRPCPort:           9093,
-				HTTPPort:           8083,
+				GRPCPort:            9093,
+				HTTPPort:            8083,
 				HealthCheckInterval: 30 * time.Second,
 			},
 			wantErr: false,
@@ -37,8 +37,8 @@ func TestServiceDiscovery_Connect(t *testing.T) {
 				ServiceName:         "audit-correlator",
 				ServiceVersion:      "1.0.0",
 				RedisURL:            "invalid://url",
-				GRPCPort:           9093,
-				HTTPPort:           8083,
+				GRPCPort:            9093,
+				HTTPPort:            8083,
 				HealthCheckInterval: 30 * time.Second,
 			},
 			wantErr: true,
@@ -75,8 +75,8 @@ func TestServiceDiscovery_RegisterService(t *testing.T) {
 			ServiceName:         "audit-correlator",
 			ServiceVersion:      "1.0.0",
 			RedisURL:            "redis://localhost:6379",
-			GRPCPort:           50051,
-			HTTPPort:           8080,
+			GRPCPort:            50051,
+			HTTPPort:            8080,
 			HealthCheckInterval: 100 * time.Millisecond,
 		}, nil)
 
@@ -112,8 +112,8 @@ func TestServiceDiscovery_HealthCheck(t *testing.T) {
 			ServiceName:         "audit-correlator",
 			ServiceVersion:      "1.0.0",
 			RedisURL:            "redis://localhost:6379",
-			GRPCPort:           9093,
-			HTTPPort:           8083,
+			GRPCPort:            9093,
+			HTTPPort:            8083,
 			HealthCheckInterval: 100 * time.Millisecond,
 		}, nil)
 
@@ -148,4 +148,3 @@ func TestServiceDiscovery_HealthCheck(t *testing.T) {
 		}
 	})
 }
-

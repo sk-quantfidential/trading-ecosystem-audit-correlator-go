@@ -1091,7 +1091,7 @@ COPY --from=builder /app/correlation-rules ./correlation-rules
 # Create directories for data and logs
 RUN mkdir -p /data/events /data/correlations /data/timelines /var/log/audit-correlator
 
-EXPOSE 8085 50057
+EXPOSE 8080 50051
 CMD ["./audit-correlator", "--config=config/config.yaml"]
 ```
 
@@ -1113,8 +1113,8 @@ services:
   audit-correlator:
     build: .
     ports:
-      - "8085:8085"
-      - "50057:50057"
+      - "8082:8080"
+      - "50052:50051"
     environment:
       - AUDIT_CORRELATOR_LOG_LEVEL=info
       - PROMETHEUS_URL=http://prometheus:9090
