@@ -10,17 +10,20 @@ import (
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 
+	auditv1 "github.com/quantfidential/trading-ecosystem/audit-correlator-go/gen/go/audit/v1"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/config"
+	grpcservices "github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/presentation/grpc/services"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/services"
 )
 
 // AuditGRPCServer implements the gRPC server interface with enhanced health service
 type AuditGRPCServer struct {
-	config      *config.Config
-	server      *grpc.Server
-	healthSrv   *health.Server
-	auditSvc    *services.AuditService
-	logger      *logrus.Logger
+	config       *config.Config
+	server       *grpc.Server
+	healthSrv    *health.Server
+	auditSvc     *services.AuditService
+	topologySvc  *services.TopologyService
+	logger       *logrus.Logger
 
 	// Metrics tracking
 	startTime         time.Time
@@ -50,21 +53,30 @@ func NewAuditGRPCServer(cfg *config.Config, auditService *services.AuditService,
 		auditService = services.NewAuditService(logger)
 	}
 
+	// Initialize topology service
+	topologyService := services.NewTopologyService(logger)
+
 	server := &AuditGRPCServer{
-		config:    cfg,
-		server:    grpc.NewServer(),
-		healthSrv: health.NewServer(),
-		auditSvc:  auditService,
-		logger:    logger,
-		startTime: time.Now(),
+		config:      cfg,
+		server:      grpc.NewServer(),
+		healthSrv:   health.NewServer(),
+		auditSvc:    auditService,
+		topologySvc: topologyService,
+		logger:      logger,
+		startTime:   time.Now(),
 	}
 
 	// Register health service
 	grpc_health_v1.RegisterHealthServer(server.server, server.healthSrv)
 
+	// Register topology service
+	topologyServer := grpcservices.NewTopologyServiceServer(topologyService, logger)
+	auditv1.RegisterTopologyServiceServer(server.server, topologyServer)
+
 	// Set initial health status
 	server.healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	server.healthSrv.SetServingStatus(cfg.ServiceName, grpc_health_v1.HealthCheckResponse_SERVING)
+	server.healthSrv.SetServingStatus("audit.v1.TopologyService", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	return server
 }
@@ -83,6 +95,7 @@ func (s *AuditGRPCServer) GracefulStop() {
 	// Update health status to not serving
 	s.healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 	s.healthSrv.SetServingStatus(s.config.ServiceName, grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+	s.healthSrv.SetServingStatus("audit.v1.TopologyService", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 
 	// Graceful stop
 	s.server.GracefulStop()
@@ -97,6 +110,7 @@ func (s *AuditGRPCServer) GetMetrics() ServerMetrics {
 	status := make(map[string]string)
 	status["health_service"] = "serving"
 	status["audit_service"] = "serving"
+	status["topology_service"] = "serving"
 
 	return ServerMetrics{
 		ActiveConnections: s.activeConnections,
