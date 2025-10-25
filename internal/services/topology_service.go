@@ -58,6 +58,24 @@ func NewTopologyService(logger *logrus.Logger) *TopologyService {
 	}
 }
 
+// GetTopologyRepository returns the topology repository (for config loading)
+func (s *TopologyService) GetTopologyRepository() ports.TopologyRepository {
+	return s.topologyRepo
+}
+
+// LoadConfigFromFile loads topology from a JSON configuration file
+func (s *TopologyService) LoadConfigFromFile(configPath string) error {
+	// Type assert to *MemoryTopologyRepository to access loading functionality
+	memRepo, ok := s.topologyRepo.(*infratopology.MemoryTopologyRepository)
+	if !ok {
+		s.logger.Warn("Cannot load config: topology repository is not in-memory type")
+		return nil
+	}
+
+	loader := infratopology.NewConfigLoader(memRepo, s.logger)
+	return loader.LoadFromFile(configPath)
+}
+
 // GetTopologyStructureUseCase returns the use case for getting topology structure
 func (s *TopologyService) GetTopologyStructureUseCase() *topology.GetTopologyStructureUseCase {
 	return s.getTopologyStructure
