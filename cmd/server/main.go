@@ -188,6 +188,13 @@ func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, gr
 func registerConnectHandlers(router *gin.Engine, grpcServer *grpcpresentation.AuditGRPCServer, logger *logrus.Logger) {
 	// Create a new TopologyService instance (matches pattern from grpc/server.go)
 	topologyService := services.NewTopologyService(logger)
+
+	// Load topology configuration from file (if exists)
+	configPath := "/app/config/topology.json"
+	if err := topologyService.LoadConfigFromFile(configPath); err != nil {
+		logger.WithError(err).Warn("Failed to load topology config, starting with empty topology")
+	}
+
 	topologyServer := grpcservices.NewTopologyServiceServer(topologyService, logger)
 
 	// Create Connect adapter
