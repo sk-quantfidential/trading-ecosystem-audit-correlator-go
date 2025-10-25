@@ -12,12 +12,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
+	auditv1connect "github.com/quantfidential/trading-ecosystem/audit-correlator-go/gen/go/audit/v1/auditv1connect"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/config"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/handlers"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/infrastructure"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/infrastructure/observability"
+	connectpresentation "github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/presentation/connect"
 	grpcpresentation "github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/presentation/grpc"
+	grpcservices "github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/presentation/grpc/services"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/services"
 )
 
@@ -76,7 +81,7 @@ func main() {
 	}
 
 	grpcServer := grpcpresentation.NewAuditGRPCServer(cfg, auditService, logger)
-	httpServer := setupHTTPServer(cfg, auditService, logger)
+	httpServer := setupHTTPServer(cfg, auditService, grpcServer, logger)
 
 	go func() {
 		logger.WithField("port", cfg.GRPCPort).Info("Starting gRPC server")
@@ -114,9 +119,24 @@ func main() {
 }
 
 
-func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, logger *logrus.Logger) *http.Server {
+func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, grpcServer *grpcpresentation.AuditGRPCServer, logger *logrus.Logger) *http.Server {
 	router := gin.New()
 	router.Use(gin.Recovery())
+
+	// Add CORS middleware for Connect protocol (browser requests)
+	router.Use(func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Connect-Protocol-Version, Connect-Timeout-Ms, X-Client, X-Client-Version")
+		c.Header("Access-Control-Expose-Headers", "Connect-Protocol-Version")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Next()
+	})
 
 	// Initialize observability (Clean Architecture: port + adapter)
 	constantLabels := map[string]string{
@@ -133,6 +153,9 @@ func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, lo
 	healthHandler := handlers.NewHealthHandlerWithConfig(cfg, auditService, logger)
 	auditHandler := handlers.NewAuditHandler(auditService, logger)
 	metricsHandler := handlers.NewMetricsHandler(metricsPort)
+
+	// Register Connect protocol handlers (for browser gRPC-Web/Connect clients)
+	registerConnectHandlers(router, grpcServer, logger)
 
 	// Observability endpoints (separate from business logic)
 	router.GET("/metrics", metricsHandler.Metrics)
@@ -157,7 +180,26 @@ func setupHTTPServer(cfg *config.Config, auditService *services.AuditService, lo
 
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.HTTPPort),
-		Handler: router,
+		Handler: h2c.NewHandler(router, &http2.Server{}), // Enable HTTP/2 for Connect protocol
 	}
+}
+
+// registerConnectHandlers registers Connect protocol handlers for browser-based gRPC clients
+func registerConnectHandlers(router *gin.Engine, grpcServer *grpcpresentation.AuditGRPCServer, logger *logrus.Logger) {
+	// Create a new TopologyService instance (matches pattern from grpc/server.go)
+	topologyService := services.NewTopologyService(logger)
+	topologyServer := grpcservices.NewTopologyServiceServer(topologyService, logger)
+
+	// Create Connect adapter
+	connectAdapter := connectpresentation.NewTopologyConnectAdapter(topologyServer)
+
+	// Generate Connect HTTP handler
+	path, handler := auditv1connect.NewTopologyServiceHandler(connectAdapter)
+
+	// Register with Gin router
+	// The path will be "/audit.v1.TopologyService/" and we need to handle all sub-paths
+	router.Any(path+"*method", gin.WrapH(handler))
+
+	logger.WithField("path", path).Info("Registered Connect protocol handlers for TopologyService")
 }
 
