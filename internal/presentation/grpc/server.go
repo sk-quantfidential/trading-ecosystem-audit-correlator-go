@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 
 	auditv1 "github.com/quantfidential/trading-ecosystem/audit-correlator-go/gen/go/audit/v1"
 	"github.com/quantfidential/trading-ecosystem/audit-correlator-go/internal/config"
@@ -73,10 +74,15 @@ func NewAuditGRPCServer(cfg *config.Config, auditService *services.AuditService,
 	topologyServer := grpcservices.NewTopologyServiceServer(topologyService, logger)
 	auditv1.RegisterTopologyServiceServer(server.server, topologyServer)
 
+	// Register reflection service (enables grpcurl and other tools)
+	reflection.Register(server.server)
+
 	// Set initial health status
 	server.healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	server.healthSrv.SetServingStatus(cfg.ServiceName, grpc_health_v1.HealthCheckResponse_SERVING)
 	server.healthSrv.SetServingStatus("audit.v1.TopologyService", grpc_health_v1.HealthCheckResponse_SERVING)
+
+	logger.Info("gRPC server initialized with reflection support")
 
 	return server
 }
