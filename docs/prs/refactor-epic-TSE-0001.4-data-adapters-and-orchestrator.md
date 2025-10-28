@@ -16,6 +16,30 @@ This PR completes the integration of audit-correlator-go with audit-data-adapter
 
 ---
 
+## What Changed
+
+### audit-correlator-go
+
+**Data Layer Integration**:
+- Integrated audit-data-adapter-go package for all data access
+- Refactored infrastructure layer to use DataAdapter repositories
+- Configuration client now uses DataAdapter.CacheRepository
+- Service discovery using DataAdapter.ServiceDiscoveryRepository
+- Audit operations through AuditEventRepository
+
+**Containerization**:
+- Multi-stage Dockerfile with layer caching optimization
+- PostgreSQL integration (audit schema)
+- Redis integration (redis_audit namespace)
+- Graceful degradation when data services unavailable
+
+**Testing & Validation**:
+- All existing tests passing (14 tests)
+- Integration test suite for data adapters
+- Docker build and deployment verified
+
+---
+
 ## 📋 Changes Overview
 
 ### Phase 1-2: Infrastructure & Service Layer Refactoring (Tasks 0-3)
