@@ -4,6 +4,28 @@
 
 Complete implementation of gRPC integration infrastructure for audit-correlator-go, following the proven patterns established in Python services. This milestone enables the audit correlator to discover and communicate with other services via gRPC, completing TSE-0001.3b for this component.
 
+## What Changed
+
+### audit-correlator-go
+
+**New Infrastructure**:
+- Enhanced gRPC server with health service (ports 8083 HTTP, 9093 gRPC)
+- Redis-based service discovery with heartbeat mechanism
+- Configuration service client with intelligent caching
+- Inter-service communication clients (RiskMonitor, TradingEngine)
+
+**Architecture**:
+- Clean Architecture with proper layer separation
+- Dependency injection with graceful defaults
+- Comprehensive error handling and graceful degradation
+- Connection pooling and caching for performance
+
+**Testing**:
+- 14 tests total (9 unit + 5 integration)
+- Service discovery integration tests
+- Configuration client tests
+- gRPC server lifecycle tests
+
 ## Key Features Implemented
 
 ### 🔗 **Enhanced gRPC Server**
